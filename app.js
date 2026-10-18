@@ -68,7 +68,7 @@ $("xlsx").onclick=()=>{
    ["Hari/Tanggal",data.activity.date||"-"],
    ["Nama Naqib",data.activity.naqib||"-"],
    [],
-   ["Petunjuk","Data hasil ekspor aplikasi TaqwimUPA v2.3"]
+   ["Petunjuk","Data hasil ekspor aplikasi TaqwimUPA v2.4"]
  ];
  const activityWs=addSheet("Data Kegiatan",activityRows,[26,58],99,[0]);
  ["A1","A2","B2","A3","B3","A4","B4","A6","B6"].forEach(addr=>{if(activityWs[addr])activityWs[addr].s=cellStyle;});
@@ -76,17 +76,6 @@ $("xlsx").onclick=()=>{
  if(activityWs["!merges"]===undefined)activityWs["!merges"]=[];
  activityWs["!merges"].push({s:{r:0,c:0},e:{r:0,c:1}});
  activityWs["!rows"][0]={hpt:32};
-
- const summary=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])];
- addSheet("Lampiran 4",summary,[8,28,24,24,38],0);
-
- const muRows=[["No","Nama Peserta","Indikator Capaian","Jawaban"]];
- data.participants.forEach((p,i)=>indicators.forEach((v,j)=>muRows.push([i+1,p.name,v,p.muasyirat?.[j]||"Belum diisi"])));
- addSheet("Lampiran 3",muRows,[8,25,68,20],0);
-
- const bioRows=[["No","Nama Peserta",...bioLabels,"Persyaratan CKMY"]];
- data.participants.forEach((p,i)=>bioRows.push([i+1,p.name,...bioLabels.map((_,j)=>p.bio?.[j]||""),(p.requirements||[]).join(", ")]));
- addSheet("Lampiran 2",bioRows,[8,25,...bioLabels.map(()=>27),38],0);
 
  const meeting=data.activity.lamp1||{meeting:[],taqwim:[]};
  const l1Rows=[["LAMPIRAN 1 — BERITA ACARA MUSYAWARAH USRAH"],[],["Hari/Tanggal",meeting.date||data.activity.date||"-"],["Kecamatan",meeting.district||data.activity.district||"-"],["Nama Naqib",meeting.naqib||data.activity.naqib||"-"],[],["No","Nama Peserta Musyawarah","Keterangan (Naqib/’Adho)"]];
@@ -97,9 +86,20 @@ $("xlsx").onclick=()=>{
  if(l1ws.A1)l1ws.A1.s=titleStyle;
  if(l1ws["!merges"]===undefined)l1ws["!merges"]=[];
  l1ws["!merges"].push({s:{r:0,c:0},e:{r:0,c:2}});
- // Re-style the Lampiran 1 table headers.
  [6, (meeting.meeting||[]).length+8].forEach(r=>{for(let c=0;c<3;c++){const a=XLSX.utils.encode_cell({r,c});if(l1ws[a])l1ws[a].s=headerStyle;}});
- XLSX.writeFile(wb,"TaqwimUPA_Laporan_v2.3.xlsx");
+
+ const bioRows=[["No","Nama Peserta",...bioLabels,"Persyaratan CKMY"]];
+ data.participants.forEach((p,i)=>bioRows.push([i+1,p.name,...bioLabels.map((_,j)=>p.bio?.[j]||""),(p.requirements||[]).join(", ")]));
+ addSheet("Lampiran 2",bioRows,[8,25,...bioLabels.map(()=>27),38],0);
+
+ const muRows=[["No","Nama Peserta","Indikator Capaian","Jawaban"]];
+ data.participants.forEach((p,i)=>indicators.forEach((v,j)=>muRows.push([i+1,p.name,v,p.muasyirat?.[j]||"Belum diisi"])));
+ addSheet("Lampiran 3",muRows,[8,25,68,20],0);
+
+ const summary=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])];
+ addSheet("Lampiran 4",summary,[8,28,24,24,38],0);
+
+ XLSX.writeFile(wb,"TaqwimUPA_Laporan_v2.4.xlsx");
 }; 
 $("docx").onclick=async()=>{if(!window.docx)return alert("Pustaka Word tidak termuat; periksa koneksi.");const {Document,Packer,Paragraph,Table,TableRow,TableCell,WidthType,HeadingLevel}=docx;let rows=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])].map((r,i)=>new TableRow({children:r.map(t=>new TableCell({children:[new Paragraph({text:String(t),bold:i===0})]}))}));let doc=new Document({sections:[{children:[new Paragraph({text:"FORM PENILAIAN CALON KADER MUAYYID / CKMY",heading:HeadingLevel.HEADING_1}),new Paragraph("Kecamatan: "+(data.activity.district||"")),new Paragraph("Hari/Tanggal: "+(data.activity.date||"")),new Table({rows,width:{size:100,type:WidthType.PERCENTAGE}})]}]});let blob=await Packer.toBlob(doc);let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Lampiran_4_CKMY.docx";a.click();URL.revokeObjectURL(a.href);};
 $("pdf").onclick=()=>window.print();
