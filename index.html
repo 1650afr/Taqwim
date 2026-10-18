@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TaqwimUPA — Lampiran 1–4</title>
+<title>TaqwimUPA — Lampiran 1–4 · v2.2</title>
 <style>
 :root{--green:#276749;--pale:#e5f2e4;--ink:#1f2937;--muted:#64748b;--line:#cbd5e1}
 *{box-sizing:border-box}body{margin:0;background:#f4f7f5;color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -15,16 +15,16 @@ main{max-width:1120px;margin:20px auto;padding:0 14px}.notice{background:#fff7dd
 </style>
 </head>
 <body>
-<header><div><h1>TaqwimUPA · Lampiran 1–4</h1><p>Input terpusat · Firebase · Ekspor laporan</p><p class="versionline"><span id="appVersion">v2.1</span> · by Muhajir, ST</p></div><div id="cloudStatus" class="status">Belum terhubung</div></header>
+<header><div><h1>TaqwimUPA · Lampiran 1–4</h1><p>Input terpusat · Firebase · Ekspor laporan</p><p class="versionline"><span id="appVersion">v2.2</span> · by Muhajir, ST</p></div><div id="cloudStatus" class="status">Belum terhubung</div></header>
 <main>
-<div class="notice"><b>Petunjuk:</b> data tetap tersimpan di perangkat. Untuk sinkronisasi online, masuk dengan akun Firebase lalu gunakan tombol Kirim ke Cloud atau Tarik dari Cloud. Jangan gunakan akun bersama.</div>
+<div class="notice"><b>Petunjuk:</b> data tersimpan di perangkat ini. Untuk sinkronisasi online, masuk dengan akun Firebase lalu gunakan tombol Kirim ke Cloud atau Tarik dari Cloud. Gunakan akun pribadi dan lakukan backup JSON secara berkala.</div>
 <div class="tabs noprint"><button class="tab active" data-tab="data">Data Peserta</button><button class="tab" data-tab="lamp1">Lampiran 1</button><button class="tab" data-tab="lamp2">Lampiran 2</button><button class="tab" data-tab="lamp3">Lampiran 3</button><button class="tab" data-tab="lamp4">Lampiran 4</button><button class="tab" data-tab="cloud">Pengaturan Cloud</button></div>
 <section id="data" class="panel"><h2>Data kegiatan dan peserta</h2>
 <div class="grid"><div class="field"><label>Kecamatan</label><input id="kecamatan" placeholder="Nama kecamatan"></div><div class="field"><label>Hari/Tanggal</label><input id="tanggal" type="date"></div><div class="field"><label>Nama Naqib</label><input id="naqib" placeholder="Nama Naqib"></div>
 <div class="field full"><label>Tambah peserta</label><div style="display:flex;gap:8px"><input id="namaBaru" placeholder="Nama lengkap peserta"><button id="add" class="primary">Tambah</button></div></div></div>
 <div id="participants"></div>
 <div class="actions"><button id="saveLocal" class="primary">Simpan di perangkat</button><button id="pull" class="secondary">Tarik dari Cloud</button><button id="push" class="primary">Kirim ke Cloud</button><button id="xlsx" class="secondary">Ekspor Excel</button><button id="docx" class="secondary">Ekspor Word</button><button id="pdf" class="secondary">Cetak / Simpan PDF</button></div>
-<p class="muted">Jumlah peserta tidak dibatasi oleh aplikasi. Pastikan batas ukuran dan versi penyimpanan cloud sesuai ketentuan layanan JSONBin.</p>
+<p class="muted">Jumlah peserta tidak dibatasi oleh aplikasi. Simpan perubahan formulir sebelum mengirim data ke cloud.</p>
 </section>
 <section id="lamp1" class="panel hidden"><h2>Lampiran 1 — Berita Acara Musyawarah Usrah</h2><div class="report-title">BERITA ACARA MUSYAWARAH USRAH MUNTASIB/MUNTAZHIM/AMIL</div>
 <div class="grid"><div class="field"><label>Hari/Tanggal</label><input id="l1date" type="date"></div><div class="field"><label>Kecamatan</label><input id="l1district"></div><div class="field"><label>Nama Naqib</label><input id="l1naqib"></div></div>
@@ -40,7 +40,7 @@ main{max-width:1120px;margin:20px auto;padding:0 14px}.notice{background:#fff7dd
 <div class="grid"><div class="field"><label>Email</label><input id="authEmail" type="email" autocomplete="email" placeholder="nama@email.com"></div><div class="field"><label>Kata sandi</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter"></div><div class="field"><label>Status akun</label><input id="authState" value="Belum masuk" readonly></div></div>
 <div class="actions"><button class="primary" id="signUp">Daftar akun</button><button class="primary" id="signIn">Masuk</button><button class="secondary" id="resetPassword">Atur ulang kata sandi</button><button class="secondary" id="signOut">Keluar</button></div>
 <hr style="border:0;border-top:1px solid #d7dfd9;margin:18px 0"><div class="actions"><button class="secondary" id="backup">Backup JSON</button><label class="secondary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">Restore JSON <input id="restore" type="file" accept="application/json" style="max-width:170px;padding:5px"></label></div><p id="cloudMsg" class="muted">Belum masuk ke Firebase.</p><p class="muted small">Backup JSON tetap tersedia walau sedang offline. Simpan salinan berkala di tempat yang aman.</p></section>
-</main><div class="footer"><span id="footerVersion">v2.1</span> · by Muhajir, ST<br>Prototipe · Perlu konfigurasi API aman dan pengujian tata letak sebelum penggunaan resmi.</div>
+</main><div class="footer"><span id="footerVersion">v2.2</span> · by Muhajir, ST<br>Prototipe · Perlu konfigurasi API aman dan pengujian tata letak sebelum penggunaan resmi.</div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script><script src="app.js"></script>
 <script type="module" src="firebase.js"></script>
 </body></html>
