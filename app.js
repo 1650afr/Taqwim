@@ -1,4 +1,3 @@
-const BUILD_VERSION = "v2.2";
 const $=id=>document.getElementById(id);
 const bioLabels=["Nama lengkap","Nama panggilan","Tempat/Tgl Lahir","Jenis kelamin","Jenjang Pendidikan","Aktifitas Dakwah/Organisasi","Kecamatan","Usia Marhalah","Nama Istri/Suami","Marhalah Istri/Suami","Nama Murabbi/ah"];
 const requirements=["Telah menjadi kader Muhib sekurang-kurangnya enam bulan","Komitmen hadir di program Halaqah minimal 70% dalam waktu 6 (enam) bulan terakhir.","Komitmen hadir di sarana tarbiyah lainnya minimal 60% dalam waktu 3 (tiga) bulan terakhir.","Memenuhi 26 Muasyirat"];
@@ -17,7 +16,7 @@ function renderBio(){let p=current("p2");$("bio").innerHTML=bioLabels.map((v,i)=
 function renderMu(){let p=current("p3");$("muasyirat").innerHTML=`<table><thead><tr><th>No</th><th>Muasyirat / Indikator Capaian</th><th>Keterangan</th></tr></thead><tbody>${indicators.map((v,i)=>`<tr><td>${i+1}</td><td>${v}</td><td><select data-mu="${i}"><option value="">Pilih</option><option ${p?.muasyirat?.[i]==="Ya"?"selected":""}>Ya</option><option ${p?.muasyirat?.[i]==="Tidak"?"selected":""}>Tidak</option></select></td></tr>`).join("")}</tbody></table>`;}
 function result(arr,n){arr=arr||[];if(arr.length===n&&arr.every(v=>v==="Ya"))return"Lulus";if(arr.some(v=>v==="Tidak"))return"Tidak";return"Belum lengkap";}
 function renderSummary(){$("summary").innerHTML=data.participants.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td>${result(p.requirements,4)}</td><td>${result(p.muasyirat,26)}</td><td><input data-note="${esc(p.id)}" value="${esc(p.notes||"")}" placeholder="Keterangan"></td></tr>`).join("");document.querySelectorAll("[data-note]").forEach(x=>x.onchange=()=>{pById(x.dataset.note).notes=x.value;saveLocal(true)});}
-function render(){ $("appVersion").textContent=BUILD_VERSION; $("footerVersion").textContent=BUILD_VERSION; $("kecamatan").value=data.activity.district||"";$("tanggal").value=data.activity.date||"";$("naqib").value=data.activity.naqib||"";renderParticipants();fillSelect("p2");fillSelect("p3");renderL1();renderBio();renderMu();renderSummary();$("l4district").value=data.activity.district||"";}
+function render(){ $("kecamatan").value=data.activity.district||"";$("tanggal").value=data.activity.date||"";$("naqib").value=data.activity.naqib||"";renderParticipants();fillSelect("p2");fillSelect("p3");renderL1();renderBio();renderMu();renderSummary();$("l4district").value=data.activity.district||"";}
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));["data","lamp1","lamp2","lamp3","lamp4","cloud"].forEach(id=>$(id).classList.toggle("hidden",id!==b.dataset.tab));});
 $("add").onclick=()=>{addPerson($("namaBaru").value);$("namaBaru").value=""};
 $("saveLocal").onclick=()=>saveLocal();
@@ -34,7 +33,74 @@ $("push").onclick=()=>{saveLocal(true);window.dispatchEvent(new CustomEvent("taq
 $("backup").onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup_lampiran_1_4.json";a.click();URL.revokeObjectURL(a.href);};
 $("restore").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let j=JSON.parse(await f.text());if(!j||!Array.isArray(j.participants)||!j.activity)throw Error("Struktur JSON tidak sesuai.");if(confirm("Ganti data lokal saat ini dengan data dari backup?")){data=j;saveLocal(true);render();alert("Restore berhasil.");}}catch(err){alert("Restore gagal: "+err.message)}e.target.value="";};
 function rowsSummary(){return data.participants.map((p,i)=>({No:i+1,Nama:p.name,Persyaratan:result(p.requirements,4),Muasyirat:result(p.muasyirat,26),Keterangan:p.notes||""}));}
-$("xlsx").onclick=()=>{if(!window.XLSX)return alert("Pustaka Excel tidak termuat; periksa koneksi.");let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["DATA KEGIATAN"],["Kecamatan",data.activity.district],["Hari/Tanggal",data.activity.date],["Naqib",data.activity.naqib]]),"Kegiatan");XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rowsSummary()),"Lampiran 4");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["No","Nama Peserta","Indikator","Jawaban"],...data.participants.flatMap((p,i)=>indicators.map((v,j)=>[i+1,p.name,v,p.muasyirat?.[j]||""]))]),"Lampiran 3");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["No","Nama Peserta",...bioLabels,"Persyaratan CKMY"],...data.participants.map((p,i)=>[i+1,p.name,...bioLabels.map((_,j)=>p.bio?.[j]||""),(p.requirements||[]).join(", ")])]),"Lampiran 2");XLSX.writeFile(wb,"Lampiran_CKMY.xlsx");};
+$("xlsx").onclick=()=>{
+ if(!window.XLSX)return alert("Pustaka Excel tidak termuat; periksa koneksi.");
+ const wb=XLSX.utils.book_new();
+ const border={top:{style:"thin",color:{rgb:"B7C9BE"}},bottom:{style:"thin",color:{rgb:"B7C9BE"}},left:{style:"thin",color:{rgb:"B7C9BE"}},right:{style:"thin",color:{rgb:"B7C9BE"}}};
+ const titleStyle={font:{bold:true,color:{rgb:"FFFFFF"},sz:14},fill:{fgColor:{rgb:"276749"}},alignment:{horizontal:"center",vertical:"center",wrapText:true},border};
+ const headerStyle={font:{bold:true,color:{rgb:"FFFFFF"}},fill:{fgColor:{rgb:"276749"}},alignment:{horizontal:"center",vertical:"center",wrapText:true},border};
+ const cellStyle={alignment:{vertical:"top",wrapText:true},border};
+ function addSheet(name, rows, widths, headerRow=0, titleRows=[]){
+   const ws=XLSX.utils.aoa_to_sheet(rows);
+   ws["!cols"]=widths.map(w=>({wch:w}));
+   ws["!rows"]=rows.map((r,i)=>({hpt:titleRows.includes(i)?26:(i===headerRow?32:30)}));
+   const range=XLSX.utils.decode_range(ws["!ref"]||"A1:A1");
+   for(let R=range.s.r;R<=range.e.r;R++){
+     for(let C=range.s.c;C<=range.e.c;C++){
+       const addr=XLSX.utils.encode_cell({r:R,c:C});
+       if(!ws[addr])continue;
+       ws[addr].s=R===headerRow?headerStyle:cellStyle;
+     }
+   }
+   if(ws["!ref"]){
+     ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:headerRow,c:0},e:{r:range.e.r,c:range.e.c}})};
+     ws["!freeze"]={xSplit:0,ySplit:headerRow+1,topLeftCell:`A${headerRow+2}`,activePane:"bottomLeft",state:"frozen"};
+     ws["!margins"]={left:0.25,right:0.25,top:0.5,bottom:0.5,header:0.2,footer:0.2};
+     ws["!pageSetup"]={orientation:widths.length>=4?"landscape":"portrait",paperSize:9,fitToWidth:1,fitToHeight:0};
+     ws["!printHeader"]={rows:`1:${headerRow+1}`};
+   }
+   XLSX.utils.book_append_sheet(wb,ws,name);
+   return ws;
+ }
+ const activityRows=[
+   ["LAPORAN DATA KEGIATAN TAQWIMUPA"],
+   ["Kecamatan",data.activity.district||"-"],
+   ["Hari/Tanggal",data.activity.date||"-"],
+   ["Nama Naqib",data.activity.naqib||"-"],
+   [],
+   ["Petunjuk","Data hasil ekspor aplikasi TaqwimUPA v2.3"]
+ ];
+ const activityWs=addSheet("Data Kegiatan",activityRows,[26,58],99,[0]);
+ ["A1","A2","B2","A3","B3","A4","B4","A6","B6"].forEach(addr=>{if(activityWs[addr])activityWs[addr].s=cellStyle;});
+ if(activityWs.A1)activityWs.A1.s=titleStyle;
+ if(activityWs["!merges"]===undefined)activityWs["!merges"]=[];
+ activityWs["!merges"].push({s:{r:0,c:0},e:{r:0,c:1}});
+ activityWs["!rows"][0]={hpt:32};
+
+ const summary=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])];
+ addSheet("Lampiran 4",summary,[8,28,24,24,38],0);
+
+ const muRows=[["No","Nama Peserta","Indikator Capaian","Jawaban"]];
+ data.participants.forEach((p,i)=>indicators.forEach((v,j)=>muRows.push([i+1,p.name,v,p.muasyirat?.[j]||"Belum diisi"])));
+ addSheet("Lampiran 3",muRows,[8,25,68,20],0);
+
+ const bioRows=[["No","Nama Peserta",...bioLabels,"Persyaratan CKMY"]];
+ data.participants.forEach((p,i)=>bioRows.push([i+1,p.name,...bioLabels.map((_,j)=>p.bio?.[j]||""),(p.requirements||[]).join(", ")]));
+ addSheet("Lampiran 2",bioRows,[8,25,...bioLabels.map(()=>27),38],0);
+
+ const meeting=data.activity.lamp1||{meeting:[],taqwim:[]};
+ const l1Rows=[["LAMPIRAN 1 — BERITA ACARA MUSYAWARAH USRAH"],[],["Hari/Tanggal",meeting.date||data.activity.date||"-"],["Kecamatan",meeting.district||data.activity.district||"-"],["Nama Naqib",meeting.naqib||data.activity.naqib||"-"],[],["No","Nama Peserta Musyawarah","Keterangan (Naqib/’Adho)"]];
+ (meeting.meeting||[]).forEach((m,i)=>l1Rows.push([i+1,m?.name||"",m?.role||""]));
+ l1Rows.push([],["No","Nama Peserta yang Mengikuti Taqwim"]);
+ (meeting.taqwim||[]).forEach((n,i)=>l1Rows.push([i+1,n||""]));
+ const l1ws=addSheet("Lampiran 1",l1Rows,[10,42,32],6,[0]);
+ if(l1ws.A1)l1ws.A1.s=titleStyle;
+ if(l1ws["!merges"]===undefined)l1ws["!merges"]=[];
+ l1ws["!merges"].push({s:{r:0,c:0},e:{r:0,c:2}});
+ // Re-style the Lampiran 1 table headers.
+ [6, (meeting.meeting||[]).length+8].forEach(r=>{for(let c=0;c<3;c++){const a=XLSX.utils.encode_cell({r,c});if(l1ws[a])l1ws[a].s=headerStyle;}});
+ XLSX.writeFile(wb,"TaqwimUPA_Laporan_v2.3.xlsx");
+}; 
 $("docx").onclick=async()=>{if(!window.docx)return alert("Pustaka Word tidak termuat; periksa koneksi.");const {Document,Packer,Paragraph,Table,TableRow,TableCell,WidthType,HeadingLevel}=docx;let rows=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])].map((r,i)=>new TableRow({children:r.map(t=>new TableCell({children:[new Paragraph({text:String(t),bold:i===0})]}))}));let doc=new Document({sections:[{children:[new Paragraph({text:"FORM PENILAIAN CALON KADER MUAYYID / CKMY",heading:HeadingLevel.HEADING_1}),new Paragraph("Kecamatan: "+(data.activity.district||"")),new Paragraph("Hari/Tanggal: "+(data.activity.date||"")),new Table({rows,width:{size:100,type:WidthType.PERCENTAGE}})]}]});let blob=await Packer.toBlob(doc);let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Lampiran_4_CKMY.docx";a.click();URL.revokeObjectURL(a.href);};
 $("pdf").onclick=()=>window.print();
 ["kecamatan","tanggal","naqib"].forEach(id=>$(id).onchange=()=>{data.activity.district=$("kecamatan").value;data.activity.date=$("tanggal").value;data.activity.naqib=$("naqib").value;saveLocal(true)});
