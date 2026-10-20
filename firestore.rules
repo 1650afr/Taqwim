@@ -1,8 +1,38 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Data lama tetap terpisah per UID; tidak dihapus atau dipindahkan.
     match /users/{userId}/taqwim/{documentId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Permohonan dapat dikirim tanpa login. Hanya Admin Utama dapat membaca/meninjau.
+    match /joinRequests/{requestId} {
+      allow create: if request.resource.data.keys().hasAll([
+          'name','email','phone','requestedRole','note','status','createdAt','source'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 200
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 5
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.requestedRole in ['Tim Taqwim','Murobby','Murobbiyah']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 1000
+        && request.resource.data.status == 'pending'
+        && request.resource.data.source == 'app';
+      allow read: if request.auth != null
+        && request.auth.token.email == 'pakmuha@gmail.com';
+      allow update: if request.auth != null
+        && request.auth.token.email == 'pakmuha@gmail.com'
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status','reviewedAt','reviewedBy'])
+        && request.resource.data.status in ['approved','rejected']
+        && request.resource.data.reviewedBy == 'pakmuha@gmail.com';
+      allow delete: if false;
     }
   }
 }

@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TaqwimUPA — Lampiran 1–4 · v2.4</title>
+<title>TaqwimUPA — Lampiran 1–4 · v2.5</title>
 <style>
 :root{--green:#276749;--pale:#e5f2e4;--ink:#1f2937;--muted:#64748b;--line:#cbd5e1}
 *{box-sizing:border-box}body{margin:0;background:#f4f7f5;color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -15,7 +15,7 @@ main{max-width:1120px;margin:20px auto;padding:0 14px}.notice{background:#fff7dd
 </style>
 </head>
 <body>
-<header><div><h1>TaqwimUPA · Lampiran 1–4</h1><p>Input terpusat · Firebase · Ekspor laporan</p><p class="versionline"><span id="appVersion">v2.4</span> · by Muhajir, ST</p></div><div id="cloudStatus" class="status">Belum terhubung</div></header>
+<header><div><h1>TaqwimUPA · Lampiran 1–4</h1><p>Input terpusat · Firebase · Ekspor laporan</p><p class="versionline"><span id="appVersion">v2.5</span> · by Muhajir, ST</p></div><div id="cloudStatus" class="status">Belum terhubung</div></header>
 <main>
 <div class="notice"><b>Petunjuk:</b> data tetap tersimpan di perangkat. Untuk sinkronisasi online, masuk dengan akun Firebase lalu gunakan tombol Kirim ke Cloud atau Tarik dari Cloud. Jangan gunakan akun bersama.</div>
 <div class="tabs noprint"><button class="tab active" data-tab="data">Data Peserta</button><button class="tab" data-tab="lamp1">Lampiran 1</button><button class="tab" data-tab="lamp2">Lampiran 2</button><button class="tab" data-tab="lamp3">Lampiran 3</button><button class="tab" data-tab="lamp4">Lampiran 4</button><button class="tab" data-tab="cloud">Pengaturan Cloud</button></div>
@@ -39,8 +39,21 @@ main{max-width:1120px;margin:20px auto;padding:0 14px}.notice{background:#fff7dd
 <p class="muted">Buat akun menggunakan email dan kata sandi, atau masuk jika sudah punya akun. Setiap akun hanya dapat membaca dan mengubah dokumen miliknya sendiri jika aturan Firestore dipasang sesuai panduan.</p>
 <div class="grid"><div class="field"><label>Email</label><input id="authEmail" type="email" autocomplete="email" placeholder="nama@email.com"></div><div class="field"><label>Kata sandi</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Minimal 6 karakter"></div><div class="field"><label>Status akun</label><input id="authState" value="Belum masuk" readonly></div></div>
 <div class="actions"><button class="primary" id="signUp">Daftar akun</button><button class="primary" id="signIn">Masuk</button><button class="secondary" id="resetPassword">Atur ulang kata sandi</button><button class="secondary" id="signOut">Keluar</button></div>
+<hr style="border:0;border-top:1px solid #d7dfd9;margin:18px 0">
+<h2>Permohonan Bergabung</h2>
+<p class="muted">Calon anggota dapat mengajukan melalui formulir atau mengirim email langsung. Pengajuan tidak otomatis memberi akses ke data.</p>
+<div class="grid">
+<div class="field"><label>Nama lengkap</label><input id="requestName" maxlength="100" placeholder="Nama calon anggota"></div>
+<div class="field"><label>Email calon anggota</label><input id="requestEmail" type="email" maxlength="200" placeholder="nama@email.com"></div>
+<div class="field"><label>Nomor WhatsApp</label><input id="requestPhone" maxlength="30" placeholder="08xxxxxxxxxx"></div>
+<div class="field"><label>Peran yang diajukan</label><select id="requestRole"><option value="Tim Taqwim">Tim Taqwim</option><option value="Murobby">Murobby</option><option value="Murobbiyah">Murobbiyah</option></select></div>
+<div class="field full"><label>Keterangan (opsional)</label><textarea id="requestNote" rows="2" maxlength="1000" placeholder="Wilayah atau keterangan tambahan"></textarea></div>
+</div>
+<div class="actions"><button class="primary" id="submitRequest">Kirim Permohonan</button><button class="secondary" id="directEmail">Ajukan lewat Email</button></div>
+<p id="requestMsg" class="muted" aria-live="polite"></p>
+<div id="adminRequests" class="hidden"><hr style="border:0;border-top:1px solid #d7dfd9;margin:18px 0"><h2>Notifikasi Permohonan Masuk</h2><p id="requestCount" class="muted">Memuat permohonan…</p><div id="requestList"></div></div>
 <hr style="border:0;border-top:1px solid #d7dfd9;margin:18px 0"><div class="actions"><button class="secondary" id="backup">Backup JSON</button><label class="secondary" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">Restore JSON <input id="restore" type="file" accept="application/json" style="max-width:170px;padding:5px"></label></div><p id="cloudMsg" class="muted">Belum masuk ke Firebase.</p><p class="muted small">Backup JSON tetap tersedia walau sedang offline. Simpan salinan berkala di tempat yang aman.</p></section>
-</main><div class="footer"><span id="footerVersion">v2.4</span> · by Muhajir, ST<br>Prototipe · Perlu konfigurasi API aman dan pengujian tata letak sebelum penggunaan resmi.</div>
+</main><div class="footer"><span id="footerVersion">v2.5</span> · by Muhajir, ST<br>Prototipe · Perlu konfigurasi API aman dan pengujian tata letak sebelum penggunaan resmi.</div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script><script src="app.js"></script>
 <script type="module" src="firebase.js"></script>
 </body></html>

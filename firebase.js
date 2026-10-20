@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCGcVOjHbAgUHexOg4eOvZgzkvMZcWec30",
@@ -16,6 +16,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 let currentUser = null;
+const ADMIN_EMAIL = "pakmuha@gmail.com";
+let stopRequestsListener = null;
 
 function message(text, status) {
   if ($("cloudMsg")) $("cloudMsg").textContent = text;
@@ -81,8 +83,75 @@ $("resetPassword").addEventListener("click", async () => {
 $("signOut").addEventListener("click", async () => { try { await signOut(auth); message("Anda sudah keluar.", "Belum masuk"); } catch (e) { message(friendlyError(e)); } });
 window.addEventListener("taqwim:push", async () => { try { message("Mengirim data ke Firebase…"); await saveCloud(); alert("Data berhasil dikirim ke Firebase."); } catch (e) { message(friendlyError(e)); alert("Gagal mengirim data: " + friendlyError(e)); } });
 window.addEventListener("taqwim:pull", async () => { try { message("Mengambil data dari Firebase…"); await loadCloud(); } catch (e) { message(friendlyError(e)); alert("Gagal menarik data: " + friendlyError(e)); } });
+function safeText(value, max=1000) { return String(value || "").trim().slice(0,max); }
+const requestStatus = id => $(id);
+$("submitRequest")?.addEventListener("click", async () => {
+  const name = safeText($("requestName")?.value,100);
+  const email = safeText($("requestEmail")?.value,200).toLowerCase();
+  const phone = safeText($("requestPhone")?.value,30);
+  const role = $("requestRole")?.value;
+  const note = safeText($("requestNote")?.value,1000);
+  const msg = $("requestMsg");
+  try {
+    if (!name || !email || !phone) throw new Error("Lengkapi nama, email, dan nomor WhatsApp.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Format email calon anggota belum benar.");
+    if (!["Tim Taqwim","Murobby","Murobbiyah"].includes(role)) throw new Error("Pilih peran yang tersedia.");
+    $("submitRequest").disabled = true;
+    if(msg) msg.textContent = "Mengirim permohonan…";
+    await addDoc(collection(db,"joinRequests"), {name,email,phone,requestedRole:role,note,status:"pending",createdAt:serverTimestamp(),source:"app"});
+    if(msg) msg.textContent = "Permohonan tercatat. Admin utama akan meninjau pengajuan ini. Pengajuan belum memberi akses akun.";
+    $("requestName").value=""; $("requestEmail").value=""; $("requestPhone").value=""; $("requestNote").value="";
+  } catch(e) { if(msg) msg.textContent = "Gagal mengirim permohonan: " + friendlyError(e); }
+  finally { $("submitRequest").disabled = false; }
+});
+$("directEmail")?.addEventListener("click", () => {
+  const name = safeText($("requestName")?.value,100);
+  const email = safeText($("requestEmail")?.value,200);
+  const phone = safeText($("requestPhone")?.value,30);
+  const role = $("requestRole")?.value || "Tim Taqwim";
+  const note = safeText($("requestNote")?.value,1000);
+  const subject = encodeURIComponent("Permohonan Bergabung TaqwimUPA - " + (name || "Calon Anggota"));
+  const body = encodeURIComponent(`Assalamu'alaikum Admin Utama TaqwimUPA,\n\nSaya mengajukan permohonan bergabung.\nNama: ${name}\nEmail: ${email}\nWhatsApp: ${phone}\nPeran diajukan: ${role}\nKeterangan: ${note}\n\nMohon ditinjau. Terima kasih.`);
+  window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+});
+function renderRequests(snapshot) {
+  const list = $("requestList"), count = $("requestCount");
+  if (!list || !count) return;
+  const docs = snapshot.docs;
+  const pending = docs.filter(d => d.data().status === "pending");
+  count.textContent = `${pending.length} permohonan menunggu persetujuan · ${docs.length} total permohonan`;
+  list.innerHTML = docs.length ? docs.map(d => {
+    const r=d.data(); const date=r.createdAt?.toDate ? r.createdAt.toDate().toLocaleString("id-ID") : "Waktu belum tersedia";
+    return `<div class="participant"><div class="phead"><b>${esc(r.name||"Tanpa nama")}</b><span class="pill">${esc(r.status||"pending")}</span></div><p class="small">${esc(r.email||"")} · ${esc(r.phone||"")}<br>Peran diajukan: ${esc(r.requestedRole||"-")}<br>${esc(date)}</p><p>${esc(r.note||"")}</p>${r.status==="pending"?`<div class="actions"><button class="primary" data-approve="${esc(d.id)}">Setujui permohonan</button><button class="warn" data-reject="${esc(d.id)}">Tolak</button></div>`:""}</div>`;
+  }).join("") : '<p class="muted">Belum ada permohonan.</p>';
+  list.querySelectorAll("[data-approve]").forEach(b=>b.onclick=async()=>{
+    if(!currentUser || currentUser.email?.toLowerCase()!==ADMIN_EMAIL) return alert("Hanya Admin Utama yang boleh menyetujui permohonan.");
+    if(!confirm("Tandai permohonan ini disetujui? Ini belum otomatis membuat akun Firebase.")) return;
+    try { await updateDoc(doc(db,"joinRequests",b.dataset.approve),{status:"approved",reviewedAt:serverTimestamp(),reviewedBy:currentUser.email}); }
+    catch(e){alert("Gagal memperbarui status: "+friendlyError(e));}
+  });
+  list.querySelectorAll("[data-reject]").forEach(b=>b.onclick=async()=>{
+    if(!currentUser || currentUser.email?.toLowerCase()!==ADMIN_EMAIL) return alert("Hanya Admin Utama yang boleh menolak permohonan.");
+    if(!confirm("Tolak permohonan ini?")) return;
+    try { await updateDoc(doc(db,"joinRequests",b.dataset.reject),{status:"rejected",reviewedAt:serverTimestamp(),reviewedBy:currentUser.email}); }
+    catch(e){alert("Gagal memperbarui status: "+friendlyError(e));}
+  });
+}
+function watchRequests(user) {
+  if(stopRequestsListener) { stopRequestsListener(); stopRequestsListener=null; }
+  const adminBox=$("adminRequests");
+  const isAdmin=!!user && user.email?.toLowerCase()===ADMIN_EMAIL;
+  adminBox?.classList.toggle("hidden",!isAdmin);
+  if(!isAdmin) return;
+  stopRequestsListener=onSnapshot(query(collection(db,"joinRequests"),orderBy("createdAt","desc")), renderRequests, err=>{
+    const count=$("requestCount"); if(count) count.textContent="Tidak dapat memuat permohonan. Periksa aturan Firestore dan koneksi.";
+    console.error(err);
+  });
+}
+
 onAuthStateChanged(auth, user => {
   currentUser = user;
+  watchRequests(user);
   $("authState").value = user ? "Masuk: " + user.email : "Belum masuk";
   $("signIn").disabled = !!user;
   $("signUp").disabled = !!user;
