@@ -1,107 +1,34 @@
-const $=id=>document.getElementById(id);
-const bioLabels=["Nama lengkap","Nama panggilan","Tempat/Tgl Lahir","Jenis kelamin","Jenjang Pendidikan","Aktifitas Dakwah/Organisasi","Kecamatan","Usia Marhalah","Nama Istri/Suami","Marhalah Istri/Suami","Nama Murabbi/ah"];
-const requirements=["Telah menjadi kader Muhib sekurang-kurangnya enam bulan","Komitmen hadir di program Halaqah minimal 70% dalam waktu 6 (enam) bulan terakhir.","Komitmen hadir di sarana tarbiyah lainnya minimal 60% dalam waktu 3 (tiga) bulan terakhir.","Memenuhi 26 Muasyirat"];
-const indicators=["Mengenal aqidah (mengenal Allah) dan urgensi ilmu untuk mengenal Allah","Mengetahui kedudukan Rasul dan perjalanan hidup serta akhlaknya","Mencintai Rasulullah, memahami, dan mengambil pelajaran dari hadits pilihan","Meyakini Islam sebagai sistem hidup yang sempurna, menghindari bid'ah (penyebab perpecahan), dan mencintai persatuan","Memahami dan menerapkan fqih thaharah","Memahami dan mencintai bahasa Arab","Membaca dan menghafal Al-Qur’an dari surat Adh-dhuha sampai an-nas","Memahami dan mengambil pelajaran dari Al Quran surat adh-dhuha sampai an-nas","Menumbuhkan kecintaan kepada Allah dan Rasul","Memahami tujuan penciptaan manusia","Mengagungkan syariat serta mencintai kebaikan dan menjauhi keburukan dan syubhat","Memiliki komitmen keislaman dan mencintai kaum beriman","Menjadikan iman dan ikhlas sebagai landasan hidup","Membiasakan dzikir dan doa utuk merasakan kebersamaan Allah","Membiasakan akhlak kepada keluarga dan masyarakat","Menjaga kualitas ibadah dan membiasakan ibadah sunnah","Mengamalkan adab berinteraksi dengan Al-Qur'an","Memahami dan melaksanakan ibadah wajib","Memahami kondisi umat Islam global khususnya Palestina","Memahami dinamika politik dan sejarah Islam","Berpartsipasi dalam aktivitas sosial dan dakwah","Meyakini kebenaran islam, bangga mendakwahkannya, dan beramal jama'i","Mengenal Islam sebagai cara pandang, dakwah, dan gerakan","Mencintai ilmu dan mengagungkan syiar Allah","Mencintai, mengagungkan, dan mengamalkan Al-Qur’an","Mengembangkan keterampilan Komunikasi"];
-const defaultData={schemaVersion:1,activity:{district:"",date:"",naqib:"",lamp1:{meeting:[],taqwim:[]}},participants:[]};
-let data=JSON.parse(localStorage.getItem("ckmy-data-v2")||"null")||defaultData;
-function saveLocal(silent=false){data.activity.district=$("kecamatan").value;data.activity.date=$("tanggal").value;data.activity.naqib=$("naqib").value;localStorage.setItem("ckmy-data-v2",JSON.stringify(data));if(!silent)alert("Tersimpan di perangkat ini.");}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function pById(id){return data.participants.find(p=>p.id===id)}
-function current(id){return pById($(id).value)}
-function addPerson(name){if(!name.trim())return;data.participants.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random(),name:name.trim(),bio:{},requirements:Array(4).fill(""),muasyirat:Array(26).fill(""),notes:""});saveLocal(true);render();}
-function fillSelect(id){let old=$(id).value;$(id).innerHTML=data.participants.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");if(data.participants.some(p=>p.id===old))$(id).value=old;}
-function renderParticipants(){$("participants").innerHTML=data.participants.map((p,i)=>`<div class="participant"><div class="phead"><b>${i+1}. ${esc(p.name)}</b><button class="warn" data-del="${esc(p.id)}">Hapus</button></div><div class="field" style="margin-top:8px"><label>Nama peserta</label><input data-name="${esc(p.id)}" value="${esc(p.name)}"></div></div>`).join("")||'<p class="muted">Belum ada peserta.</p>';document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(confirm("Hapus peserta ini?")){data.participants=data.participants.filter(p=>p.id!==b.dataset.del);saveLocal(true);render();}});document.querySelectorAll("[data-name]").forEach(x=>x.onchange=()=>{pById(x.dataset.name).name=x.value;saveLocal(true);render();});}
-function renderL1(){let l=data.activity.lamp1||{meeting:[],taqwim:[]};$("meetingRows").innerHTML=Array.from({length:10},(_,i)=>`<tr><td>${i+1}</td><td><select data-meeting="${i}"><option value="">Pilih peserta</option>${data.participants.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></td><td><input data-role="${i}" placeholder="Naqib/’Adho"></td></tr>`).join("");$("taqwimRows").innerHTML=Array.from({length:10},(_,i)=>`<tr><td>${i+1}</td><td><select data-taq="${i}"><option value="">Pilih peserta</option>${data.participants.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></td><td>${i+11}</td><td><select data-taq="${i+10}"><option value="">Pilih peserta</option>${data.participants.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select></td></tr>`).join("");(l.meeting||[]).forEach((v,i)=>{let n=document.querySelector(`[data-meeting="${i}"]`);let r=document.querySelector(`[data-role="${i}"]`);if(n)n.value=v.name||"";if(r)r.value=v.role||""});(l.taqwim||[]).forEach((v,i)=>{let n=document.querySelector(`[data-taq="${i}"]`);if(n)n.value=v||""});$("l1date").value=l.date||data.activity.date||"";$("l1district").value=l.district||data.activity.district||"";$("l1naqib").value=l.naqib||data.activity.naqib||"";$("signature").textContent=$("l1naqib").value||"................................";}
-function renderBio(){let p=current("p2");$("bio").innerHTML=bioLabels.map((v,i)=>`<div class="field"><label>${i+1}. ${v}</label><input data-bio="${i}" value="${esc(p?.bio?.[i]||"")}"></div>`).join("");$("req").innerHTML=`<table><thead><tr><th>No</th><th>Persyaratan</th><th>Jawaban</th></tr></thead><tbody>${requirements.map((v,i)=>`<tr><td>${i+1}</td><td>${v}</td><td><select data-req="${i}"><option value="">Pilih</option><option ${p?.requirements?.[i]==="Ya"?"selected":""}>Ya</option><option ${p?.requirements?.[i]==="Tidak"?"selected":""}>Tidak</option></select></td></tr>`).join("")}</tbody></table>`;}
-function renderMu(){let p=current("p3");$("muasyirat").innerHTML=`<table><thead><tr><th>No</th><th>Muasyirat / Indikator Capaian</th><th>Keterangan</th></tr></thead><tbody>${indicators.map((v,i)=>`<tr><td>${i+1}</td><td>${v}</td><td><select data-mu="${i}"><option value="">Pilih</option><option ${p?.muasyirat?.[i]==="Ya"?"selected":""}>Ya</option><option ${p?.muasyirat?.[i]==="Tidak"?"selected":""}>Tidak</option></select></td></tr>`).join("")}</tbody></table>`;}
-function result(arr,n){arr=arr||[];if(arr.length===n&&arr.every(v=>v==="Ya"))return"Lulus";if(arr.some(v=>v==="Tidak"))return"Tidak";return"Belum lengkap";}
-function renderSummary(){$("summary").innerHTML=data.participants.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td>${result(p.requirements,4)}</td><td>${result(p.muasyirat,26)}</td><td><input data-note="${esc(p.id)}" value="${esc(p.notes||"")}" placeholder="Keterangan"></td></tr>`).join("");document.querySelectorAll("[data-note]").forEach(x=>x.onchange=()=>{pById(x.dataset.note).notes=x.value;saveLocal(true)});}
-function render(){ $("kecamatan").value=data.activity.district||"";$("tanggal").value=data.activity.date||"";$("naqib").value=data.activity.naqib||"";renderParticipants();fillSelect("p2");fillSelect("p3");renderL1();renderBio();renderMu();renderSummary();$("l4district").value=data.activity.district||"";}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));["data","lamp1","lamp2","lamp3","lamp4","cloud"].forEach(id=>$(id).classList.toggle("hidden",id!==b.dataset.tab));});
-$("add").onclick=()=>{addPerson($("namaBaru").value);$("namaBaru").value=""};
-$("saveLocal").onclick=()=>saveLocal();
-$("p2").onchange=renderBio;$("p3").onchange=renderMu;
-$("saveL1").onclick=()=>{data.activity.lamp1={date:$("l1date").value,district:$("l1district").value,naqib:$("l1naqib").value,meeting:[],taqwim:[]};document.querySelectorAll("[data-meeting]").forEach(x=>data.activity.lamp1.meeting[x.dataset.meeting]={name:x.value,role:document.querySelector(`[data-role="${x.dataset.meeting}"]`).value});document.querySelectorAll("[data-taq]").forEach(x=>data.activity.lamp1.taqwim[x.dataset.taq]=x.value);data.activity.district=data.activity.lamp1.district;data.activity.date=data.activity.lamp1.date;data.activity.naqib=data.activity.lamp1.naqib;saveLocal(true);render();alert("Lampiran 1 tersimpan.");};
-$("saveL2").onclick=()=>{let p=current("p2");if(!p)return alert("Tambahkan peserta dahulu.");document.querySelectorAll("[data-bio]").forEach(x=>p.bio[x.dataset.bio]=x.value);document.querySelectorAll("[data-req]").forEach(x=>p.requirements[x.dataset.req]=x.value);saveLocal(true);renderSummary();alert("Lampiran 2 tersimpan.");};
-$("saveL3").onclick=()=>{let p=current("p3");if(!p)return alert("Tambahkan peserta dahulu.");document.querySelectorAll("[data-mu]").forEach(x=>p.muasyirat[x.dataset.mu]=x.value);saveLocal(true);renderSummary();alert("Lampiran 3 tersimpan.");};
-$("saveL4").onclick=()=>{data.activity.district=$("l4district").value;document.querySelectorAll("[data-note]").forEach(x=>{let p=pById(x.dataset.note);if(p)p.notes=x.value});saveLocal(true);alert("Lampiran 4 tersimpan.");};
-// Firebase menangani autentikasi dan sinkronisasi di firebase.js.
-window.getTaqwimData=()=>data;
-window.setTaqwimData=(next)=>{if(!next||!Array.isArray(next.participants)||!next.activity)throw new Error("Data cloud tidak sesuai format aplikasi.");data=next;localStorage.setItem("ckmy-data-v2",JSON.stringify(data));render();};
-$("pull").onclick=()=>window.dispatchEvent(new CustomEvent("taqwim:pull"));
-$("push").onclick=()=>{saveLocal(true);window.dispatchEvent(new CustomEvent("taqwim:push"));};
-$("backup").onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup_lampiran_1_4.json";a.click();URL.revokeObjectURL(a.href);};
-$("restore").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let j=JSON.parse(await f.text());if(!j||!Array.isArray(j.participants)||!j.activity)throw Error("Struktur JSON tidak sesuai.");if(confirm("Ganti data lokal saat ini dengan data dari backup?")){data=j;saveLocal(true);render();alert("Restore berhasil.");}}catch(err){alert("Restore gagal: "+err.message)}e.target.value="";};
-function rowsSummary(){return data.participants.map((p,i)=>({No:i+1,Nama:p.name,Persyaratan:result(p.requirements,4),Muasyirat:result(p.muasyirat,26),Keterangan:p.notes||""}));}
-$("xlsx").onclick=()=>{
- if(!window.XLSX)return alert("Pustaka Excel tidak termuat; periksa koneksi.");
- const wb=XLSX.utils.book_new();
- const border={top:{style:"thin",color:{rgb:"B7C9BE"}},bottom:{style:"thin",color:{rgb:"B7C9BE"}},left:{style:"thin",color:{rgb:"B7C9BE"}},right:{style:"thin",color:{rgb:"B7C9BE"}}};
- const titleStyle={font:{bold:true,color:{rgb:"FFFFFF"},sz:14},fill:{fgColor:{rgb:"276749"}},alignment:{horizontal:"center",vertical:"center",wrapText:true},border};
- const headerStyle={font:{bold:true,color:{rgb:"FFFFFF"}},fill:{fgColor:{rgb:"276749"}},alignment:{horizontal:"center",vertical:"center",wrapText:true},border};
- const cellStyle={alignment:{vertical:"top",wrapText:true},border};
- function addSheet(name, rows, widths, headerRow=0, titleRows=[]){
-   const ws=XLSX.utils.aoa_to_sheet(rows);
-   ws["!cols"]=widths.map(w=>({wch:w}));
-   ws["!rows"]=rows.map((r,i)=>({hpt:titleRows.includes(i)?26:(i===headerRow?32:30)}));
-   const range=XLSX.utils.decode_range(ws["!ref"]||"A1:A1");
-   for(let R=range.s.r;R<=range.e.r;R++){
-     for(let C=range.s.c;C<=range.e.c;C++){
-       const addr=XLSX.utils.encode_cell({r:R,c:C});
-       if(!ws[addr])continue;
-       ws[addr].s=R===headerRow?headerStyle:cellStyle;
-     }
-   }
-   if(ws["!ref"]){
-     ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:headerRow,c:0},e:{r:range.e.r,c:range.e.c}})};
-     ws["!freeze"]={xSplit:0,ySplit:headerRow+1,topLeftCell:`A${headerRow+2}`,activePane:"bottomLeft",state:"frozen"};
-     ws["!margins"]={left:0.25,right:0.25,top:0.5,bottom:0.5,header:0.2,footer:0.2};
-     ws["!pageSetup"]={orientation:widths.length>=4?"landscape":"portrait",paperSize:9,fitToWidth:1,fitToHeight:0};
-     ws["!printHeader"]={rows:`1:${headerRow+1}`};
-   }
-   XLSX.utils.book_append_sheet(wb,ws,name);
-   return ws;
- }
- const activityRows=[
-   ["LAPORAN DATA KEGIATAN TAQWIMUPA"],
-   ["Kecamatan",data.activity.district||"-"],
-   ["Hari/Tanggal",data.activity.date||"-"],
-   ["Nama Naqib",data.activity.naqib||"-"],
-   [],
-   ["Petunjuk","Data hasil ekspor aplikasi TaqwimUPA v2.4"]
- ];
- const activityWs=addSheet("Data Kegiatan",activityRows,[26,58],99,[0]);
- ["A1","A2","B2","A3","B3","A4","B4","A6","B6"].forEach(addr=>{if(activityWs[addr])activityWs[addr].s=cellStyle;});
- if(activityWs.A1)activityWs.A1.s=titleStyle;
- if(activityWs["!merges"]===undefined)activityWs["!merges"]=[];
- activityWs["!merges"].push({s:{r:0,c:0},e:{r:0,c:1}});
- activityWs["!rows"][0]={hpt:32};
-
- const meeting=data.activity.lamp1||{meeting:[],taqwim:[]};
- const l1Rows=[["LAMPIRAN 1 — BERITA ACARA MUSYAWARAH USRAH"],[],["Hari/Tanggal",meeting.date||data.activity.date||"-"],["Kecamatan",meeting.district||data.activity.district||"-"],["Nama Naqib",meeting.naqib||data.activity.naqib||"-"],[],["No","Nama Peserta Musyawarah","Keterangan (Naqib/’Adho)"]];
- (meeting.meeting||[]).forEach((m,i)=>l1Rows.push([i+1,m?.name||"",m?.role||""]));
- l1Rows.push([],["No","Nama Peserta yang Mengikuti Taqwim"]);
- (meeting.taqwim||[]).forEach((n,i)=>l1Rows.push([i+1,n||""]));
- const l1ws=addSheet("Lampiran 1",l1Rows,[10,42,32],6,[0]);
- if(l1ws.A1)l1ws.A1.s=titleStyle;
- if(l1ws["!merges"]===undefined)l1ws["!merges"]=[];
- l1ws["!merges"].push({s:{r:0,c:0},e:{r:0,c:2}});
- [6, (meeting.meeting||[]).length+8].forEach(r=>{for(let c=0;c<3;c++){const a=XLSX.utils.encode_cell({r,c});if(l1ws[a])l1ws[a].s=headerStyle;}});
-
- const bioRows=[["No","Nama Peserta",...bioLabels,"Persyaratan CKMY"]];
- data.participants.forEach((p,i)=>bioRows.push([i+1,p.name,...bioLabels.map((_,j)=>p.bio?.[j]||""),(p.requirements||[]).join(", ")]));
- addSheet("Lampiran 2",bioRows,[8,25,...bioLabels.map(()=>27),38],0);
-
- const muRows=[["No","Nama Peserta","Indikator Capaian","Jawaban"]];
- data.participants.forEach((p,i)=>indicators.forEach((v,j)=>muRows.push([i+1,p.name,v,p.muasyirat?.[j]||"Belum diisi"])));
- addSheet("Lampiran 3",muRows,[8,25,68,20],0);
-
- const summary=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])];
- addSheet("Lampiran 4",summary,[8,28,24,24,38],0);
-
- XLSX.writeFile(wb,"TaqwimUPA_Laporan_v2.4.xlsx");
-}; 
-$("docx").onclick=async()=>{if(!window.docx)return alert("Pustaka Word tidak termuat; periksa koneksi.");const {Document,Packer,Paragraph,Table,TableRow,TableCell,WidthType,HeadingLevel}=docx;let rows=[["No","Nama Peserta","Persyaratan CKMY","Laporan Muasyirat","Keterangan"],...rowsSummary().map(r=>[r.No,r.Nama,r.Persyaratan,r.Muasyirat,r.Keterangan])].map((r,i)=>new TableRow({children:r.map(t=>new TableCell({children:[new Paragraph({text:String(t),bold:i===0})]}))}));let doc=new Document({sections:[{children:[new Paragraph({text:"FORM PENILAIAN CALON KADER MUAYYID / CKMY",heading:HeadingLevel.HEADING_1}),new Paragraph("Kecamatan: "+(data.activity.district||"")),new Paragraph("Hari/Tanggal: "+(data.activity.date||"")),new Table({rows,width:{size:100,type:WidthType.PERCENTAGE}})]}]});let blob=await Packer.toBlob(doc);let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Lampiran_4_CKMY.docx";a.click();URL.revokeObjectURL(a.href);};
-$("pdf").onclick=()=>window.print();
-["kecamatan","tanggal","naqib"].forEach(id=>$(id).onchange=()=>{data.activity.district=$("kecamatan").value;data.activity.date=$("tanggal").value;data.activity.naqib=$("naqib").value;saveLocal(true)});
-render();
+(()=>{
+const $=id=>document.getElementById(id), clone=x=>JSON.parse(JSON.stringify(x));
+const forms=window.TAQWIM_FORMS||{}; const keys=Object.keys(forms);
+const empty=()=>({participants:[],activity:{},processes:{}});
+let data=JSON.parse(localStorage.getItem('taqwimupa-v26')||'null')||empty();
+if(!Array.isArray(data.participants))data=empty(); data.activity ||= {}; data.processes ||= {};
+let route=localStorage.getItem('taqwim-route')||keys[0]; if(!forms[route])route=keys[0]; let selected='';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const proc=()=>{data.processes[route] ||= {meeting:{attendees:[],selected:[]},decisions:{}};return data.processes[route]};
+function save(silent=true){data.activity.area=$('area').value;data.activity.date=$('date').value;data.activity.leader=$('leader').value;localStorage.setItem('taqwimupa-v26',JSON.stringify(data));if(!silent)alert('Data tersimpan di perangkat ini.');}
+function person(){return data.participants.find(p=>p.id===selected)||null}
+function renderRoutes(){ $('routes').innerHTML=keys.map(k=>`<button class="route ${k===route?'active':''}" data-route="${k}"><b>${esc(forms[k].title)}</b><small>${forms[k].requirements.length} persyaratan · ${forms[k].indicators.length} Muasyirat · ${forms[k].sheets.length} lembar sumber</small></button>`).join('');$('routeInfo').textContent='Jalur aktif: '+forms[route].title+'. Data peserta dan penilaian disimpan terpisah menurut jalur.';document.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>{route=b.dataset.route;localStorage.setItem('taqwim-route',route);selected='';render();});}
+function renderPeople(){ $('area').value=data.activity.area||'';$('date').value=data.activity.date||'';$('leader').value=data.activity.leader||'';$('peopleList').innerHTML=data.participants.length?data.participants.map(p=>`<div class="participant"><div class="row"><b style="flex:1">${esc(p.name)}</b><span class="pill">${esc(forms[p.route]?.title||'')}</span><button data-edit="${p.id}">Pilih / Edit</button><button data-del="${p.id}">Hapus</button></div></div>`).join(''):'<p class="muted">Belum ada peserta. Tambahkan peserta untuk mulai mengisi form.</p>';document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{selected=b.dataset.edit;render();show('profile');});document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{if(confirm('Hapus peserta ini beserta data penilaiannya?')){data.participants=data.participants.filter(p=>p.id!==b.dataset.del);if(selected===b.dataset.del)selected='';save();render();}});}
+function options(id){return data.participants.filter(p=>p.route===route).map(p=>`<option value="${p.id}" ${p.id===id?'selected':''}>${esc(p.name)}</option>`).join('')}
+function renderMeeting(){let m=proc().meeting; $('meetingForm').innerHTML=`<h3>Peserta musyawarah</h3>${Array.from({length:10},(_,i)=>`<div class="row" style="margin:6px 0"><span>${i+1}.</span><div class="field"><input data-attendee="${i}" value="${esc(m.attendees?.[i]||'')}" placeholder="Nama peserta musyawarah"></div><div class="field"><select data-role="${i}"><option value="">Keterangan</option><option ${m.roles?.[i]==='Naqib'?'selected':''}>Naqib</option><option ${m.roles?.[i]==='Adho'?'selected':''}>Adho</option></select></div></div>`).join('')}<h3>Nama yang disepakati mengikuti proses Taqwim</h3><div class="grid">${Array.from({length:20},(_,i)=>`<div class="field"><label>Urutan ${i+1}</label><select data-selected="${i}"><option value="">Pilih peserta</option>${options(m.selected?.[i])}</select></div>`).join('')}</div>`;}
+function renderProfile(){const p=person();$('profilePerson').innerHTML='<option value="">Pilih peserta</option>'+options(selected);$('bioForm').innerHTML=p?forms[route].bioFields.map((f,i)=>`<div class="field"><label>${esc(f)}</label><input data-bio="${i}" value="${esc(p.bio?.[i]||'')}" placeholder="Isi ${esc(f.toLowerCase())}"></div>`).join(''):'<p class="muted">Pilih peserta terlebih dahulu.</p>';$('requirements').innerHTML=p?forms[route].requirements.map((q,i)=>`<div class="question"><p><b>${i+1}.</b> ${esc(q)}</p><div class="choices"><label><input type="radio" name="req${i}" value="Ya" ${p.requirements?.[i]==='Ya'?'checked':''}> Ya</label><label><input type="radio" name="req${i}" value="Tidak" ${p.requirements?.[i]==='Tidak'?'checked':''}> Tidak</label></div></div>`).join(''):'<p class="muted">Tambahkan dan pilih peserta untuk mengisi persyaratan.</p>';}
+function renderIndicators(){const p=person();$('indicatorPerson').innerHTML='<option value="">Pilih peserta</option>'+options(selected);$('indicatorForm').innerHTML=p?forms[route].indicators.map((q,i)=>`<div class="question"><p><b>${i+1}.</b> ${esc(q)}</p><div class="choices"><label><input type="radio" name="mu${i}" value="Ya" ${p.indicators?.[i]==='Ya'?'checked':''}> Ya</label><label><input type="radio" name="mu${i}" value="Tidak" ${p.indicators?.[i]==='Tidak'?'checked':''}> Tidak</label></div></div>`).join(''):'<p class="muted">Pilih peserta untuk mengisi Muasyirat.</p>';}
+function renderDecision(){const ps=data.participants.filter(p=>p.route===route),d=proc().decisions;$('decisionTable').innerHTML=ps.length?`<table><thead><tr><th>No</th><th>Nama</th><th>Persyaratan</th><th>Muasyirat</th><th>Hasil Taqwim</th><th>Keterangan</th></tr></thead><tbody>${ps.map((p,i)=>{let r=p.requirements||[],m=p.indicators||[];return `<tr><td>${i+1}</td><td>${esc(p.name)}</td><td>${r.filter(x=>x==='Ya').length}/${forms[route].requirements.length}</td><td>${m.filter(x=>x==='Ya').length}/${forms[route].indicators.length}</td><td><select data-result="${p.id}"><option value="">Belum dinilai</option><option ${d[p.id]?.result==='Lulus'?'selected':''}>Lulus</option><option ${d[p.id]?.result==='Tidak Lulus'?'selected':''}>Tidak Lulus</option></select></td><td><input data-note="${p.id}" value="${esc(d[p.id]?.note||'')}" placeholder="Keterangan"></td></tr>`}).join('')}</tbody></table>`:'<p class="muted">Belum ada peserta pada jalur ini.</p>';}
+function render(){renderRoutes();renderPeople();renderMeeting();renderProfile();renderIndicators();renderDecision();}
+function show(id){document.querySelectorAll('main section[id]').forEach(s=>s.classList.toggle('hidden',s.id!==id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));}
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>show(b.dataset.tab));
+$('addPerson').onclick=()=>{let name=$('newName').value.trim();if(!name)return alert('Isi nama peserta.');let p={id:crypto.randomUUID(),name,route,bio:{},requirements:[],indicators:[]};data.participants.push(p);selected=p.id;$('newName').value='';save();render();show('profile');};
+$('profilePerson').onchange=e=>{selected=e.target.value;renderProfile();};$('indicatorPerson').onchange=e=>{selected=e.target.value;renderIndicators();};
+$('saveProfile').onclick=()=>{let p=person();if(!p)return alert('Pilih peserta.');p.bio={};document.querySelectorAll('[data-bio]').forEach(x=>p.bio[x.dataset.bio]=x.value);p.requirements=forms[route].requirements.map((_,i)=>document.querySelector(`input[name="req${i}"]:checked`)?.value||'');save();alert('Biodata dan persyaratan tersimpan.');renderDecision();};
+$('saveIndicators').onclick=()=>{let p=person();if(!p)return alert('Pilih peserta.');p.indicators=forms[route].indicators.map((_,i)=>document.querySelector(`input[name="mu${i}"]:checked`)?.value||'');save();alert('Penilaian Muasyirat tersimpan.');renderDecision();};
+$('saveMeeting').onclick=()=>{let m=proc().meeting;m.attendees=[];m.roles=[];m.selected=[];document.querySelectorAll('[data-attendee]').forEach(x=>m.attendees[x.dataset.attendee]=x.value);document.querySelectorAll('[data-role]').forEach(x=>m.roles[x.dataset.role]=x.value);document.querySelectorAll('[data-selected]').forEach(x=>m.selected[x.dataset.selected]=x.value);save();alert('Lampiran 1 tersimpan.');};
+$('saveDecision').onclick=()=>{let d=proc().decisions;document.querySelectorAll('[data-result]').forEach(x=>{d[x.dataset.result] ||= {};d[x.dataset.result].result=x.value;});document.querySelectorAll('[data-note]').forEach(x=>{d[x.dataset.note] ||= {};d[x.dataset.note].note=x.value;});proc().attendees=$('decisionAttendees').value;proc().signer=$('decisionSigner').value;save();alert('Data penilaian dan penetapan tersimpan.');};
+['area','date','leader'].forEach(id=>$(id).addEventListener('change',()=>save()));$('saveLocal').onclick=()=>save(false);
+$('push').onclick=()=>window.dispatchEvent(new Event('taqwim:push'));$('pull').onclick=()=>window.dispatchEvent(new Event('taqwim:pull'));
+$('exportXlsx').onclick=()=>{if(!window.XLSX)return alert('Pustaka Excel belum termuat.');const wb=XLSX.utils.book_new();for(const k of keys){const ps=data.participants.filter(p=>p.route===k);const rows=[['Jalur',forms[k].title],['Wilayah',data.activity.area||''],[],['No','Nama','Biodata','Persyaratan Ya','Persyaratan Tidak','Muasyirat Ya','Muasyirat Tidak','Hasil']];ps.forEach((p,i)=>{let d=data.processes[k]?.decisions?.[p.id]||{};rows.push([i+1,p.name,JSON.stringify(p.bio||{}),(p.requirements||[]).filter(x=>x==='Ya').length,(p.requirements||[]).filter(x=>x==='Tidak').length,(p.indicators||[]).filter(x=>x==='Ya').length,(p.indicators||[]).filter(x=>x==='Tidak').length,d.result||'']);});XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),forms[k].title.replace('→','ke').slice(0,31));}XLSX.writeFile(wb,'TaqwimUPA_v2.6.xlsx');};
+$('backup').onclick=()=>{save();let a=document.createElement('a'),blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});a.href=URL.createObjectURL(blob);a.download='Backup_TaqwimUPA_v2.6.json';a.click();URL.revokeObjectURL(a.href);};$('restore').onchange=async e=>{try{let f=e.target.files[0];if(!f)return;let j=JSON.parse(await f.text());if(!Array.isArray(j.participants)||!j.activity)throw Error('Format backup tidak sesuai.');data=j;save();render();alert('Backup berhasil dipulihkan.');}catch(err){alert('Gagal restore: '+err.message);}};
+window.getTaqwimData=()=>data;window.setTaqwimData=next=>{if(!next||!Array.isArray(next.participants)||!next.activity)throw Error('Data cloud tidak sesuai format aplikasi.');data=next;data.processes ||= {};localStorage.setItem('taqwimupa-v26',JSON.stringify(data));render();};
+render();show('people');
+})();
