@@ -102,7 +102,7 @@ $("submitRequest")?.addEventListener("click", async () => {
   try {
     if (!name || !email || !phone) throw new Error("Lengkapi nama, email, dan nomor WhatsApp.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Format email calon anggota belum benar.");
-    if (!["Tim Taqwim","Murobby","Murobbiyah"].includes(role)) throw new Error("Pilih peran yang tersedia.");
+    if (!["Tim Taqwim","Murobby","Murobbiyah","Naqib","Naqibah"].includes(role)) throw new Error("Pilih peran yang tersedia.");
     $("submitRequest").disabled = true;
     if(msg) msg.textContent = "Mengirim permohonan…";
     await addDoc(collection(db,"joinRequests"), {name,email,phone,requestedRole:role,note,status:"pending",createdAt:serverTimestamp(),source:"app"});
@@ -156,8 +156,19 @@ function watchRequests(user) {
   });
 }
 
-onAuthStateChanged(auth, user => {
+async function loadAccessProfile(user) {
+  if (!user) { activeRole = "unassigned"; window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}})); return; }
+  if (user.email?.toLowerCase() === ADMIN_EMAIL) { activeRole = "Admin Utama"; window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}})); return; }
+  try {
+    const profileSnap = await getDoc(doc(db, "users", user.uid, "profile", "access"));
+    activeRole = profileSnap.exists() ? String(profileSnap.data()?.role || "unassigned") : "unassigned";
+  } catch (e) { activeRole = "unassigned"; console.error("Gagal membaca profil akses", e); }
+  window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}}));
+}
+
+onAuthStateChanged(auth, async user => {
   currentUser = user;
+  await loadAccessProfile(user);
   watchRequests(user);
   $("authState").value = user ? "Masuk: " + user.email : "Belum masuk";
   $("signIn").disabled = !!user;
