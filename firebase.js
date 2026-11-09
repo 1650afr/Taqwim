@@ -83,6 +83,13 @@ $("resetPassword").addEventListener("click", async () => {
 $("signOut").addEventListener("click", async () => { try { await signOut(auth); message("Anda sudah keluar.", "Belum masuk"); } catch (e) { message(friendlyError(e)); } });
 window.addEventListener("taqwim:push", async () => { try { message("Mengirim data ke Firebase…"); await saveCloud(); alert("Data berhasil dikirim ke Firebase."); } catch (e) { message(friendlyError(e)); alert("Gagal mengirim data: " + friendlyError(e)); } });
 window.addEventListener("taqwim:pull", async () => { try { message("Mengambil data dari Firebase…"); await loadCloud(); } catch (e) { message(friendlyError(e)); alert("Gagal menarik data: " + friendlyError(e)); } });
+// Escape teks dari Firestore sebelum dimasukkan ke HTML agar daftar pemohon aman ditampilkan.
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+  }[ch]));
+}
+
 function safeText(value, max=1000) { return String(value || "").trim().slice(0,max); }
 const requestStatus = id => $(id);
 $("submitRequest")?.addEventListener("click", async () => {
