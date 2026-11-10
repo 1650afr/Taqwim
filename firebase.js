@@ -226,11 +226,62 @@ async function loadAccessProfile(user) {
   window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}}));
 }
 
+
+// ===== v2.9 Pengelolaan Binaan (Pola B) =====
+const managementRoles = ["Admin Utama","Tim Taqwim","Murobby","Murobbiyah","Naqib","Naqibah"];
+function canManageAssignments() { return ["Admin Utama","Tim Taqwim"].includes(activeRole); }
+function managementMessage(t) { const el=$("managementMsg"); if(el) el.textContent=t; }
+async function refreshManagement() {
+  const panel=$("management");
+  if(!panel || !currentUser || !managementRoles.includes(activeRole)) return;
+  $("assignmentAdmin")?.classList.toggle("hidden",!canManageAssignments());
+  $("mentorArea")?.classList.toggle("hidden",!["Murobby","Murobbiyah"].includes(activeRole));
+  $("oversightArea")?.classList.toggle("hidden",!["Admin Utama","Tim Taqwim","Naqib","Naqibah"].includes(activeRole));
+  try {
+    if(canManageAssignments()) {
+      const snap=await getDocs(query(collection(db,"binaanAssignments"),orderBy("createdAt","desc")));
+      $("assignmentList").innerHTML=snap.empty?"<p class='muted'>Belum ada penugasan.</p>":snap.docs.map(d=>{
+        const x=d.data(); return `<div class="participant"><b>${esc(x.participantName||x.participantUid)}</b><p class="muted">Pembina UID: ${esc(x.mentorUid)} · Peserta UID: ${esc(x.participantUid)} · ${esc(x.status||"active")}</p><button data-disable-assignment="${esc(d.id)}">Cabut penugasan</button></div>`;
+      }).join("");
+      $("assignmentList").querySelectorAll("[data-disable-assignment]").forEach(b=>b.onclick=async()=>{
+        if(!confirm("Cabut penugasan ini?")) return;
+        try { await updateDoc(doc(db,"binaanAssignments",b.dataset.disableAssignment),{status:"revoked",updatedAt:serverTimestamp(),updatedBy:currentUser.uid}); await refreshManagement(); }
+        catch(e){managementMessage("Gagal mencabut penugasan: "+friendlyError(e));}
+      });
+    }
+    const q=canManageAssignments()
+      ? query(collection(db,"binaanAssignments"),where("mentorUid","==",currentUser.uid),where("status","==","active"))
+      : query(collection(db,"binaanAssignments"),where("mentorUid","==",currentUser.uid),where("status","==","active"));
+    const own=await getDocs(q);
+    $("myAssignments").innerHTML=own.empty?"<p class='muted'>Belum ada binaan yang ditugaskan ke akun ini.</p>":own.docs.map(d=>{const x=d.data();return `<div class="participant"><b>${esc(x.participantName||"Peserta")}</b><p class="muted">Jalur: ${esc(x.pathway||"Belum ditentukan")}</p></div>`}).join("");
+    if(["Admin Utama","Tim Taqwim","Naqib","Naqibah"].includes(activeRole)) {
+      const reports=await getDocs(query(collection(db,"taqwimReports"),orderBy("updatedAt","desc")));
+      $("oversightReports").innerHTML=reports.empty?"<p class='muted'>Belum ada laporan pada koleksi baru.</p>":reports.docs.map(d=>{const x=d.data();return `<div class="participant"><b>${esc(x.participantName||"Peserta")}</b><p class="muted">Pembina UID: ${esc(x.mentorUid||"")} · Jalur: ${esc(x.pathway||"")}</p></div>`}).join("");
+    }
+  } catch(e) { managementMessage("Tidak dapat memuat data pengelolaan. Periksa Firestore Rules v2.9 dan indeks yang diminta Firebase. "+friendlyError(e)); }
+}
+$("createAssignment")?.addEventListener("click",async()=>{
+  if(!canManageAssignments()) return managementMessage("Hanya Admin Utama/Tim Taqwim yang dapat mengatur penugasan.");
+  const mentorUid=$("assignMentorUid").value.trim(), participantUid=$("assignParticipantUid").value.trim();
+  if(!mentorUid||!participantUid) return managementMessage("Isi UID pembina dan UID peserta.");
+  if(mentorUid===participantUid) return managementMessage("UID pembina dan peserta tidak boleh sama.");
+  try {
+    await addDoc(collection(db,"binaanAssignments"),{mentorUid,participantUid,participantName:"",pathway:"muhib_muayyid",status:"active",createdAt:serverTimestamp(),createdBy:currentUser.uid,updatedAt:serverTimestamp()});
+    $("assignMentorUid").value=""; $("assignParticipantUid").value="";
+    managementMessage("Penugasan tersimpan. Pastikan UID pembina benar dan perannya sudah aktif.");
+    await refreshManagement();
+  } catch(e){managementMessage("Gagal menyimpan penugasan: "+friendlyError(e));}
+});
+$("refreshAssignments")?.addEventListener("click",refreshManagement);
+window.addEventListener("taqwim:session",()=>setTimeout(refreshManagement,500));
+
 onAuthStateChanged(auth, async user => {
   currentUser = user;
   try {
     await loadAccessProfile(user);
     window.dispatchEvent(new CustomEvent("taqwim:session", {detail:{uid:user?.uid||null, email:user?.email||null, role:activeRole}}));
+    const managementTab=document.querySelector('[data-tab="management"]');
+    if(managementTab) managementTab.classList.toggle("hidden",!user || activeRole==="unassigned");
     watchRequests(user);
     $("authState").value = user ? "Masuk: " + user.email : "Belum masuk";
     $("signIn").disabled = !!user;
