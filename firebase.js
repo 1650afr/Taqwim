@@ -16,6 +16,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 let currentUser = null;
+let activeRole = "unassigned";
 const ADMIN_EMAIL = "pakmuha@gmail.com";
 let stopRequestsListener = null;
 
@@ -172,15 +173,21 @@ async function loadAccessProfile(user) {
 
 onAuthStateChanged(auth, async user => {
   currentUser = user;
-  await loadAccessProfile(user);
-  window.dispatchEvent(new CustomEvent("taqwim:session", {detail:{uid:user?.uid||null, email:user?.email||null, role:activeRole}}));
-  watchRequests(user);
-  $("authState").value = user ? "Masuk: " + user.email : "Belum masuk";
-  $("signIn").disabled = !!user;
-  $("signUp").disabled = !!user;
-  $("signOut").disabled = !user;
-  $("pull").disabled = !user;
-  $("push").disabled = !user;
-  if (user) message("Masuk sebagai " + user.email + ". Data lokal belum otomatis dikirim; tekan Kirim ke Cloud untuk menyimpan.", "Firebase terhubung");
-  else message("Belum masuk. Data peserta disembunyikan sampai akun aktif.", "Belum masuk");
+  try {
+    await loadAccessProfile(user);
+    window.dispatchEvent(new CustomEvent("taqwim:session", {detail:{uid:user?.uid||null, email:user?.email||null, role:activeRole}}));
+    watchRequests(user);
+    $("authState").value = user ? "Masuk: " + user.email : "Belum masuk";
+    $("signIn").disabled = !!user;
+    $("signUp").disabled = !!user;
+    $("signOut").disabled = !user;
+    $("pull").disabled = !user;
+    $("push").disabled = !user;
+    if (user) message("Masuk sebagai " + user.email + ". Data lokal belum otomatis dikirim; tekan Kirim ke Cloud untuk menyimpan.", "Akun masuk");
+    else message("Belum masuk. Data peserta disembunyikan sampai akun aktif.", "Belum masuk");
+  } catch (e) {
+    console.error("Kesalahan saat memeriksa status akun:", e);
+    $("authState").value = "Gagal memeriksa akun";
+    message("Login terdeteksi, tetapi pemeriksaan profil gagal: " + friendlyError(e), "Perlu pemeriksaan");
+  }
 });
