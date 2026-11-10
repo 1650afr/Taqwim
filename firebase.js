@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, setDoc, addDoc, collection, query, where, orderBy, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCGcVOjHbAgUHexOg4eOvZgzkvMZcWec30",
@@ -138,7 +138,7 @@ function renderRequests(snapshot) {
   }).join("") : '<p class="muted">Belum ada permohonan.</p>';
   list.querySelectorAll("[data-approve]").forEach(b=>b.onclick=async()=>{
     if(!currentUser || currentUser.email?.toLowerCase()!==ADMIN_EMAIL) return alert("Hanya Admin Utama yang boleh menyetujui permohonan.");
-    if(!confirm("Tandai permohonan ini disetujui? Ini belum otomatis membuat akun Firebase.")) return;
+    if(!confirm("Setujui permohonan ini? Jika calon anggota sudah memiliki akun dengan email yang sama, peran yang diajukan akan diaktifkan saat ia masuk berikutnya.")) return;
     try { await updateDoc(doc(db,"joinRequests",b.dataset.approve),{status:"approved",reviewedAt:serverTimestamp(),reviewedBy:currentUser.email}); }
     catch(e){alert("Gagal memperbarui status: "+friendlyError(e));}
   });
@@ -162,12 +162,67 @@ function watchRequests(user) {
 }
 
 async function loadAccessProfile(user) {
-  if (!user) { activeRole = "unassigned"; window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}})); return; }
-  if (user.email?.toLowerCase() === ADMIN_EMAIL) { activeRole = "Admin Utama"; window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}})); return; }
+  if (!user) {
+    activeRole = "unassigned";
+    window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}}));
+    return;
+  }
+
+  if (user.email?.toLowerCase() === ADMIN_EMAIL) {
+    activeRole = "Admin Utama";
+    window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}}));
+    return;
+  }
+
+  const profileRef = doc(db, "users", user.uid, "profile", "access");
   try {
-    const profileSnap = await getDoc(doc(db, "users", user.uid, "profile", "access"));
-    activeRole = profileSnap.exists() ? String(profileSnap.data()?.role || "unassigned") : "unassigned";
-  } catch (e) { activeRole = "unassigned"; console.error("Gagal membaca profil akses", e); }
+    const profileSnap = await getDoc(profileRef);
+    if (profileSnap.exists()) {
+      activeRole = String(profileSnap.data()?.role || "unassigned");
+    } else {
+      // Aktivasi hanya dapat dilakukan jika ada permohonan berstatus approved
+      // dengan email dan peran yang sama. Firestore Rules memvalidasi ulang
+      // syarat ini saat dokumen profil dibuat.
+      const email = String(user.email || "").trim().toLowerCase();
+      if (!email) throw new Error("Akun tidak memiliki alamat email.");
+      const approvedQuery = query(
+        collection(db, "joinRequests"),
+        where("email", "==", email),
+        where("status", "==", "approved")
+      );
+      const approvedSnap = await getDocs(approvedQuery);
+      const approved = approvedSnap.docs
+        .map(d => ({ id:d.id, data:d.data() }))
+        .filter(x => ["Tim Taqwim","Murobby","Murobbiyah","Naqib","Naqibah"].includes(x.data.requestedRole))
+        .sort((a,b) => {
+          const ta = a.data.reviewedAt?.toMillis?.() || 0;
+          const tb = b.data.reviewedAt?.toMillis?.() || 0;
+          return tb-ta;
+        })[0];
+
+      if (!approved) {
+        activeRole = "unassigned";
+      } else {
+        const role = approved.data.requestedRole;
+        await setDoc(profileRef, {
+          role,
+          email,
+          approvalRequestId: approved.id,
+          assignedBinaan: [],
+          activatedAt: serverTimestamp(),
+          activatedBy: "approved-request"
+        });
+        activeRole = role;
+      }
+    }
+  } catch (e) {
+    activeRole = "unassigned";
+    console.error("Gagal memeriksa atau mengaktifkan profil akses", e);
+    message(
+      "Akun berhasil masuk, tetapi peran belum dapat diaktifkan. Pastikan Firestore Rules v2.8.1 sudah dipasang. " + friendlyError(e),
+      "Perlu pemeriksaan akses"
+    );
+  }
   window.dispatchEvent(new CustomEvent("taqwim:role", {detail:{role:activeRole}}));
 }
 

@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMainAdmin() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == 'pakmuha@gmail.com';
+    }
+
+    function validRole(role) {
+      return role in ['Tim Taqwim', 'Murobby', 'Murobbiyah', 'Naqib', 'Naqibah'];
+    }
+
+    // Data pribadi lama tetap berada di ruang masing-masing UID.
+    match /users/{userId}/taqwim/{documentId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Profil akses: pemilik boleh membaca; hanya Admin Utama yang dapat
+    // mengubah profil yang sudah ada. Pembuatan pertama oleh pemilik hanya
+    // diizinkan jika ada permohonan yang telah disetujui dan cocok.
+    match /users/{userId}/profile/{profileId} {
+      allow read: if signedIn()
+        && (request.auth.uid == userId || isMainAdmin());
+
+      allow create: if isMainAdmin()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && profileId == 'access'
+          && validRole(request.resource.data.role)
+          && request.resource.data.email == request.auth.token.email.lower()
+          && request.resource.data.approvalRequestId is string
+          && exists(/databases/$(database)/documents/joinRequests/$(request.resource.data.approvalRequestId))
+          && get(/databases/$(database)/documents/joinRequests/$(request.resource.data.approvalRequestId)).data.status == 'approved'
+          && get(/databases/$(database)/documents/joinRequests/$(request.resource.data.approvalRequestId)).data.email == request.auth.token.email.lower()
+          && get(/databases/$(database)/documents/joinRequests/$(request.resource.data.approvalRequestId)).data.requestedRole == request.resource.data.role
+        );
+
+      allow update, delete: if isMainAdmin();
+    }
+
+    // Permohonan: siapa pun boleh mengirim; pemohon hanya boleh membaca
+    // permohonan miliknya. Peninjauan hanya oleh Admin Utama.
+    match /joinRequests/{requestId} {
+      allow create: if request.resource.data.keys().hasAll([
+          'name', 'email', 'phone', 'requestedRole', 'note',
+          'status', 'createdAt', 'source'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.email == request.resource.data.email.lower()
+        && request.resource.data.phone is string
+        && validRole(request.resource.data.requestedRole)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.source == 'app';
+
+      allow read: if isMainAdmin()
+        || (signedIn() && resource.data.email == request.auth.token.email.lower());
+
+      allow update, delete: if isMainAdmin();
+    }
+
+    // Tolak akses ke seluruh dokumen lain yang tidak didefinisikan.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
