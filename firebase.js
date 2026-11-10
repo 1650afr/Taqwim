@@ -33,6 +33,10 @@ function friendlyError(error) {
     "auth/user-not-found": "Akun tidak ditemukan.",
     "auth/wrong-password": "Kata sandi salah.",
     "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi nanti.",
+    "auth/network-request-failed": "Koneksi internet gagal menghubungi Firebase. Periksa jaringan lalu coba lagi.",
+    "auth/user-disabled": "Akun ini dinonaktifkan di Firebase Authentication. Hubungi admin.",
+    "auth/operation-not-allowed": "Metode Email/Password belum diaktifkan di Firebase Authentication.",
+    "auth/invalid-api-key": "Konfigurasi API Firebase tidak valid.",
     "permission-denied": "Akses ditolak. Periksa aturan keamanan Firestore di panduan.",
     "unavailable": "Firebase sedang tidak tersedia atau koneksi internet bermasalah."
   };
@@ -74,11 +78,11 @@ $("signUp").addEventListener("click", async () => {
 });
 $("signIn").addEventListener("click", async () => {
   try { const { email, password } = requireEmailPassword(); message("Sedang masuk…"); await signInWithEmailAndPassword(auth, email, password); message("Berhasil masuk.", "Firebase terhubung"); }
-  catch (e) { message(friendlyError(e)); }
+  catch (e) { message("Gagal masuk: " + friendlyError(e), "Login gagal"); console.error("Firebase sign-in error:", e); }
 });
 $("resetPassword").addEventListener("click", async () => {
   try { const email = $("authEmail").value.trim(); if (!email) throw new Error("Isi email terlebih dahulu untuk menerima tautan pengaturan ulang."); await sendPasswordResetEmail(auth, email); message("Jika email terdaftar, tautan pengaturan ulang kata sandi akan dikirim."); }
-  catch (e) { message(friendlyError(e)); }
+  catch (e) { message("Gagal mengirim tautan reset: " + friendlyError(e)); console.error("Firebase password reset error:", e); }
 });
 $("signOut").addEventListener("click", async () => { try { await signOut(auth); message("Anda sudah keluar.", "Belum masuk"); } catch (e) { message(friendlyError(e)); } });
 window.addEventListener("taqwim:push", async () => { try { message("Mengirim data ke Firebase…"); await saveCloud(); alert("Data berhasil dikirim ke Firebase."); } catch (e) { message(friendlyError(e)); alert("Gagal mengirim data: " + friendlyError(e)); } });
@@ -169,6 +173,7 @@ async function loadAccessProfile(user) {
 onAuthStateChanged(auth, async user => {
   currentUser = user;
   await loadAccessProfile(user);
+  window.dispatchEvent(new CustomEvent("taqwim:session", {detail:{uid:user?.uid||null, email:user?.email||null, role:activeRole}}));
   watchRequests(user);
   $("authState").value = user ? "Masuk: " + user.email : "Belum masuk";
   $("signIn").disabled = !!user;
@@ -177,5 +182,5 @@ onAuthStateChanged(auth, async user => {
   $("pull").disabled = !user;
   $("push").disabled = !user;
   if (user) message("Masuk sebagai " + user.email + ". Data lokal belum otomatis dikirim; tekan Kirim ke Cloud untuk menyimpan.", "Firebase terhubung");
-  else message("Belum masuk ke Firebase. Data lokal tetap tersimpan di perangkat.", "Belum masuk");
+  else message("Belum masuk. Data peserta disembunyikan sampai akun aktif.", "Belum masuk");
 });
